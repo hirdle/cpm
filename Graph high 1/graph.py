@@ -8,28 +8,19 @@ from pybricks.robotics import DriveBase
 
 ev3 = EV3Brick()
 
-edges_list = [["А1","Б1",36],["А1","А2",46],["Б1","В1",16],["Б1","Б2",11],["В1","Г1",31],["В1","В2",37],["Г1","Д1",46],["Г1","Г2",20],["Д1","Е1",44],["Д1","Д2",38],["Е1","Ж1",16],["Е1","Е2",33],["Ж1","Ж2",29],["А2","Б2",43],["А2","А3",24],["Б2","В2",24],["Б2","Б3",28],["В2","Г2",34],["В2","В3",10],["Г2","Д2",34],["Г2","Г3",43],["Д2","Е2",44],["Д2","Д3",19],["Е2","Ж2",27],["Е2","Е3",18],["Ж2","Ж3",40],["А3","Б3",11],["А3","А4",39],["Б3","В3",19],["Б3","Б4",11],["В3","Г3",23],["В3","В4",22],["Г3","Д3",36],["Г3","Г4",42],["Д3","Е3",32],["Д3","Д4",16],["Е3","Ж3",44],["Е3","Е4",34],["Ж3","Ж4",39],["А4","Б4",50],["А4","А5",29],["Б4","В4",25],["Б4","Б5",36],["В4","Г4",33],["В4","В5",15],["Г4","Д4",36],["Г4","Г5",39],["Д4","Е4",13],["Д4","Д5",34],["Е4","Ж4",17],["Е4","Е5",14],["Ж4","Ж5",45],["А5","Б5",23],["Б5","В5",38],["В5","Г5",17],["Г5","Д5",38],["Д5","Е5",31],["Е5","Ж5",14]]
-
+edges_list = [["А1","Б1",24],["А1","А2",31],["Б1","В1",41],["Б1","Б2",43],["В1","Г1",49],["В1","В2",23],["Г1","Д1",45],["Г1","Г2",10],["Д1","Е1",30],["Д1","Д2",23],["Е1","Ж1",36],["Е1","Е2",40],["Ж1","Ж2",24],["А2","Б2",18],["А2","А3",27],["Б2","В2",49],["Б2","Б3",33],["В2","Г2",20],["В2","В3",24],["Г2","Д2",10],["Г2","Г3",43],["Д2","Е2",25],["Д2","Д3",22],["Е2","Ж2",44],["Е2","Е3",12],["Ж2","Ж3",31],["А3","Б3",21],["А3","А4",40],["Б3","В3",22],["Б3","Б4",15],["В3","Г3",15],["В3","В4",44],["Г3","Д3",47],["Г3","Г4",42],["Д3","Е3",34],["Д3","Д4",41],["Е3","Ж3",33],["Е3","Е4",49],["Ж3","Ж4",46],["А4","Б4",46],["А4","А5",17],["Б4","В4",24],["Б4","Б5",33],["В4","Г4",20],["В4","В5",49],["Г4","Д4",15],["Г4","Г5",19],["Д4","Е4",12],["Д4","Д5",19],["Е4","Ж4",14],["Е4","Е5",50],["Ж4","Ж5",37],["А5","Б5",23],["Б5","В5",45],["В5","Г5",17],["Г5","Д5",26],["Д5","Е5",50],["Е5","Ж5",46]]
 graph = {}
 
 timer = StopWatch()
 
 left_motor = Motor(Port.C, Direction.COUNTERCLOCKWISE)
 right_motor = Motor(Port.B)
-# mid_motor = Motor(Port.A)
 
 LS_right = ColorSensor(Port.S2)
 LS_left = ColorSensor(Port.S3)
-# LS_cube = ColorSensor(Port.S4)
 
 Button1 = TouchSensor(Port.S1)
 
-# LS_side_right = ColorSensor(Port.S4)
-# LS_side_left = ColorSensor(Port.S1)
-
-# US = UltrasonicSensor(Port.S4)
-
-# if LS_right.color() == Color.GREEN
 S = 0
 d = 62.4
 deg_enc = left_motor.angle()
@@ -43,7 +34,7 @@ filtered = [0, 0, 0]
 
 robot = DriveBase(left_motor, right_motor, wheel_diameter=64, axle_track=104)
 
-# функции
+# функции из мм в градусы и наоборот
 def mm_to_deg(mm):
     global d
     return mm * 360 / d / 3.1415
@@ -54,10 +45,13 @@ def deg_to_mm(deg):
     return deg / 360 * d * 3.1415
 
 
+# стоп моторы
 def motors_stop():
     left_motor.stop()
     right_motor.stop()
 
+
+# ПИД регулятор по перекресткам
 def pid_reg(v,kp,ki,kd,n,ride=35):
     error_i = 0
     last_error = 0
@@ -89,6 +83,7 @@ def pid_reg(v,kp,ki,kd,n,ride=35):
         right_motor.stop()
 
 
+# ПИД регулятор по градусам
 def pid_reg_deg(v,kp,ki,kd,deg):
     old_deg = left_motor.angle()
     error_i = 0
@@ -115,6 +110,7 @@ def pid_reg_deg(v,kp,ki,kd,deg):
     right_motor.stop()
 
 
+# непонятно
 def pid_reg2(v,kp,ki,kd,n):
     error_i = 0
     last_error = 0
@@ -146,6 +142,8 @@ def pid_reg2(v,kp,ki,kd,n):
         left_motor.stop()
         right_motor.stop()
 
+
+# тоже непонятно
 def empty_pid_reg(v,kp,ki,kd, offset = 0):
         global error_i, last_error
         error = LS_right.reflection() - LS_left.reflection()
@@ -166,6 +164,7 @@ def empty_pid_reg(v,kp,ki,kd, offset = 0):
         wait(10)
 
 
+# фильтры
 def filter(data, n):
     global filtered
     filtered.append(data)
@@ -175,6 +174,7 @@ def filter(data, n):
     return sorted(filtered[:n])[n//2]
 
 
+# ввод чиселок
 def enter():
     global number
     while not Button.CENTER in ev3.buttons.pressed():
@@ -197,6 +197,7 @@ def enter():
         wait(10)
 
 
+# определение зоны
 def zone(n, x_0):
     global deg_enc, d
     pi_reg(300, 0.3, 0, 0, 1)
@@ -204,6 +205,7 @@ def zone(n, x_0):
     return floor(3 - ((S - x_0) / 300))
 
 
+# определение зоны модифицированное
 def zone2(n, y_0):
     # pi_reg(300, 0.3, 0, 0, 1)
     y_sum = 210
@@ -211,6 +213,7 @@ def zone2(n, y_0):
     return ceil((S - y_0) / (y_sum / n))
 
 
+# определение зоны новое
 def zone3(n, b_0):
     global deg_enc, d
     error_i = 0
@@ -252,6 +255,7 @@ def zone3(n, b_0):
     return (S > 150) + 1
 
 
+# танковый поворот
 def tank_turn(degrees):
     global d
     deg = left_motor.angle()
@@ -262,6 +266,7 @@ def tank_turn(degrees):
     right_motor.stop()
 
 
+# поворот танковый по датчикам
 def turn(n, v, t, back=0):
     for _ in range(n):
         left_motor.run(v)
@@ -276,6 +281,7 @@ def turn(n, v, t, back=0):
         motors_stop()
 
 
+# анти-поворот танковый по датчикам
 def anti_turn(n, v, t, back=0):
     for _ in range(n):
         left_motor.run(v)
@@ -290,6 +296,7 @@ def anti_turn(n, v, t, back=0):
         motors_stop()
 
 
+# выравнивание по линии
 def line_align(v):
     while (LS_left.reflection() > 40 or LS_right.reflection() > 40):
         if LS_left.reflection() > 40 and LS_right.reflection() > 40:
@@ -304,12 +311,14 @@ def line_align(v):
     motors_stop()
 
 
+# финиширование робота
 def finish():
     pi_reg(300, 0.3, 0.003, 0, 1)    
     robot.straight(150)
     tank_turn(90 * (number - 2))
 
 
+# проезд в мм
 def ride_mm(v, mm):
     global d
     deg = left_motor.angle()
@@ -328,10 +337,11 @@ def to_first():
     pid_reg_deg(300, 2, 0, 0, mm_to_deg(180))
 
 
+# открыть захват
 def open():
     mid_motor.run_until_stalled(300, duty_limit=50)
 
-
+# закрыть захват
 def close():
     mid_motor.run_until_stalled(-300, duty_limit=50)
     mid_motor.hold()
@@ -357,6 +367,7 @@ def cube_search(n, x_0, l):
     return floor(((S - x_0) / l)), int(cube_type <= 100)
 
 
+# строим дерево путей
 def tree_path(current: int, length: int, min_:int, path: list, end_: int, best_path: list, old: int = 99):
     global graph
     if current == end_:
@@ -401,6 +412,7 @@ def tree_path(current: int, length: int, min_:int, path: list, end_: int, best_p
         return [min_, best_path]
 
 
+# поиск пути по коду
 def pathfinding(code2):
     global edges_list, graph
     # 0  1  2  3  4  5  6
@@ -474,7 +486,7 @@ def pathfinding(code2):
         algorithm.append(0)
     return algorithm
 
-
+# считывание кода
 def code_read():
     global d
     data = ""
@@ -495,7 +507,7 @@ def code_read():
     left_motor.stop()
     right_motor.stop()
     deg2=left_motor.angle()
-    deg_target=(deg2-deg1)//2
+    deg_target=(deg2-deg1)//2+1
     ride_mm(200, deg_target)
     for i in range(7):
         ev3.speaker.beep(100)
@@ -574,9 +586,11 @@ def code_read():
 
 # wait(1000)
 
+# ожидаем нажатия кнопки (тач сенсора)
 while not Button1.pressed():
     ...
 
+# проезд до кода
 ride_mm(400, 50)
 wait(100)
 line_align(200)
@@ -585,44 +599,56 @@ wait(100)
 
 pid_reg(400, 1.75, 0, 0, 1, 0)
 
+# считываем код
 data=code_read()
+# выводим его
 ev3.screen.print(data)
+# ищем путь для проезда
 algorithm = pathfinding(data)
+# небольшой поворот для выравнивания
 tank_turn(5)
 
-# tank_turn(45)
-# turn(1, -300, 0, 0)
-
+# проезд до основной (стартовой) точки
 pid_reg(450, 2, 0, 0, 1, 40)
 # pid_reg(300, 1, 0, 0, 1, 600)
 
+# проезд по алгоритму ( 0 - проезд прямо, 1 - поворот направо, 2 - поворот налево )
 for i in algorithm:
     if i==0:
         pid_reg(450, 1.75, 0, 0, 1)
     if i==1:
         anti_turn(1, 350, 250, 125)
+        pid_reg_deg(450, 1.75, 0, 0, 100)
     if i==2:
         anti_turn(1, -350, 250, 125)
+        pid_reg_deg(450, 1.75, 0, 0, 100)
 
+
+# здесь разворот робота на 180 градусов
 wait(3000)
 tank_turn(180)
 # anti_turn(1, 350, 250, 125)
 # turn(1, 300, 0, 0)
 
 print(algorithm)
+
+# проезд по обратному пути
 for i in range(len(algorithm)):
     if algorithm[len(algorithm)-i-1]==0:
         ride_mm(300, 20)
         pid_reg(450, 2, 0, 0, 1)
     if algorithm[len(algorithm)-i-1]==2:
         anti_turn(1, 350, 250, 125)
+        pid_reg_deg(450, 1.75, 0, 0, 100)
     if algorithm[len(algorithm)-i-1]==1:
         anti_turn(1, -350, 250, 125)
+        pid_reg_deg(450, 1.75, 0, 0, 100)
     print(algorithm[len(algorithm)-i-1])
 
 
+# едем обратно на финиш
 line_align(200)
-
+pid_reg_deg(450, 1.75, 0, 0, 100)
 pid_reg(450, 2, 0, 0, 1, 0)
 # pid_reg(300, 1, 0, 0, 1, 0)
 ride_mm(300, 300)
