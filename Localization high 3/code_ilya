@@ -1,0 +1,720 @@
+#!/usr/bin/env pybricks-micropython
+
+from pybricks.hubs import EV3Brick
+from pybricks.ev3devices import Motor, ColorSensor, UltrasonicSensor, TouchSensor, GyroSensor
+from pybricks.parameters import Port, Direction, Button, Stop
+from pybricks.parameters import Color as Col
+from pybricks.tools import wait, StopWatch
+from pybricks.robotics import DriveBase
+import math
+
+
+class Robot:
+
+    def __init__(self):
+        self.init_vars()
+        self.init_hardware()
+
+
+    # инит хардваре
+    def init_hardware(self): # инициализация оборудования
+        self.ev3 = EV3Brick()
+
+        # Initialize the motors.
+        self.left_motor = Motor(Port.C, positive_direction=Direction.COUNTERCLOCKWISE)
+        self.right_motor = Motor(Port.B)
+
+
+        # self.middle_motor = Motor(Port.D)
+
+        # Initialize the color sensor.
+        self.line_sensor_1 = ColorSensor(Port.S2)
+        self.line_sensor_2 = ColorSensor(Port.S3)
+        # self.line_sensor_2 = ColorSensor(Port.S2)
+        # self.middle_color_sensor = ColorSensor(Port.S1)
+        # self.gyro_sensor = GyroSensor(Port.S4)
+        # self.ultrasonic_sensor = UltrasonicSensor(Port.S4)
+
+        # Initialize the drive base.
+        self.robot = DriveBase(self.left_motor, self.right_motor, wheel_diameter=62.4, axle_track=185)
+        self.robot.settings(straight_speed=self.default_speed)
+
+        self.touch_sensor_1, self.touch_sensor_2 = None, None
+
+        try:
+            self.touch_sensor_1 = TouchSensor(Port.S1)
+            # self.touch_sensor_2 = TouchSensor(Port.S2)
+
+        except:
+            pass
+
+
+    # инитим переменные
+    def init_vars(self): # инициализация переменных
+
+        
+
+        self.default_speed = 350 # инициализация дефолтной скорости
+
+        self.active_cube = 0  # 0 - left 1 - right
+        self.last_error = 0 # инициализация last_error
+        self.error = 0 # инициализация error
+        self.I = 0 # инициализация I
+        self.d = 56
+
+        self.gray = 35 # инициализация среднего значения между белым и черным
+
+        self.counter = 1 # инициализация counter
+
+        self.colors_int = { # инициализация цветов
+            Col.BLACK: 1,
+            Col.BLUE: 2,
+            Col.GREEN: 3,
+            Col.YELLOW: 4,
+            Col.RED: 5,
+            Col.WHITE: 6,
+            Col.BROWN: 7,
+            Col.ORANGE: 8,
+            Col.PURPLE: 9,
+        }
+
+
+    def mm_to_deg(self, mm):
+        return mm * 360 / self.d / 3.1415
+
+    def deg_to_mm(self, deg):
+        return deg / 360 * self.d * 3.1415
+
+    # функция для воспроизведения сигнала
+    def beep(self): 
+        self.ev3.speaker.beep(300)
+
+
+    # функция для остановки двигателей
+    def stop(self): 
+        self.robot.stop()
+
+
+    # чтение значения с левого датчика
+    def read_line_1(self):
+        return self.line_sensor_1.reflection()
+
+    
+    # чтение значения с правого датчика
+    def read_line_2(self):
+        return self.line_sensor_2.reflection()
+
+
+    # функция для ожидания нажатия датчика касания
+    def wait_pressed(self):
+        while not self.touch_sensor_1.pressed(): pass
+        wait(300)
+
+
+    # функция для движения вперед
+    def forward(self, dist, speed=None):
+        if speed:
+            self.robot.settings(straight_speed=speed)
+
+        self.stop()
+        self.robot.straight(dist)
+        self.stop()
+
+        self.robot.settings(straight_speed=self.default_speed)
+
+
+    # функция для движения назад
+    def backward(self, dist, speed=None):
+        if speed:
+            self.robot.settings(straight_speed=speed)
+
+        self.stop()
+        self.robot.straight(-dist)
+        self.stop()
+
+        self.robot.settings(straight_speed=self.default_speed)
+
+
+    # функция для движения вперед по времени
+    def forward_time(self, time, speed=None):
+
+        if not speed:
+            speed = self.default_speed
+
+        timer = StopWatch()
+        timer.reset()
+
+        self.stop()
+
+        while timer.time() <= time:
+            self.robot.drive(speed, 0)
+
+        self.stop()
+
+
+    # функция для движения назад по времени
+    def backward_time(self, time, speed=None):
+
+        if not speed:
+            speed = self.default_speed
+
+        timer = StopWatch()
+        timer.reset()
+
+        self.stop()
+
+        while timer.time() <= time:
+            self.robot.drive(-speed, 0)
+
+        self.stop()
+
+
+    # функция для поворота направо
+    def right(self):
+        self.stop()
+        self.robot.turn(90)
+        self.stop()
+
+
+    # функция для поворота налево
+    def left(self):
+        self.stop()
+        self.robot.turn(-90)
+        self.stop()
+
+
+    # функция для заданного разворота
+    def turn_angle(self, deg):
+        self.stop()
+        self.robot.turn(deg)
+        self.stop()
+
+
+    # функция для разворота на 180 градусов
+    def turn(self):
+        self.stop()
+        self.robot.turn(180)
+        self.stop()
+
+
+    # функция для поворота по линиям влево
+    def left_line(self):
+        self.stop()
+
+        while self.line_sensor_1.reflection() > 30:
+            self.left_motor.run(-200)
+            self.right_motor.run(200)
+
+        while self.line_sensor_2.reflection() > 30:
+            self.left_motor.run(-200)
+            self.right_motor.run(200)
+
+        self.stop()
+
+
+    # функция для поворота по линиям вправо
+    def right_line(self):
+        self.stop()
+
+        while self.line_sensor_2.reflection() > 30:
+            self.left_motor.run(200)
+            self.right_motor.run(-200)
+
+        while self.line_sensor_1.reflection() > 30:
+            self.left_motor.run(200)
+            self.right_motor.run(-200)
+
+        self.stop()
+
+
+    # функция для закрытия захвата
+    def close_catch(self):
+        self.middle_motor.run_time(100, 1000, then=Stop.HOLD)
+
+
+    # функция для открытия захвата
+    def open_catch(self):
+        self.middle_motor.run_time(-100, 1000, then=Stop.BRAKE)
+
+
+    # функция для сбивания объекта с помощью захвата
+    def destroy_object(self):
+        self.middle_motor.run_time(250, 1000, then=Stop.BRAKE)
+
+
+    # линия без цикла
+    def run_line(self, speed=350, kp=2.5, kd=50, ki=0.07):
+
+        self.error = self.line_sensor_1.reflection() - self.line_sensor_2.reflection()
+        P = kp * self.error
+        D = kd * (self.error - self.last_error)
+        self.I += ki * self.error
+
+        U = P + D + self.I
+
+        # self.robot.drive(speed, U)
+
+        self.left_motor.run(speed + U)
+        self.right_motor.run(speed - U)
+
+        self.last_error = self.error
+
+        wait(10)
+
+
+    # линия c 1 датчиком
+    def run_line_one_sensor(self, speed=150, kp=3, kd=50, ki=0.07):
+
+        self.error = self.gray - self.line_sensor_2.reflection()
+        P = kp * self.error
+        D = kd * (self.error - self.last_error)
+        self.I += ki * self.error
+
+        U = P + D + self.I
+
+        # self.robot.drive(speed, U)
+
+        self.left_motor.run(speed + U)
+        self.right_motor.run(speed - U)
+
+        self.last_error = self.error
+
+        wait(10)
+
+
+    # линия для движения по стенке
+    def run_wall_us(self, dist=150, speed=200, kp=3, kd=10, ki=0.07):
+
+        self.error = dist - self.read_us_dist()
+        P = kp * self.error
+        D = kd * (self.error - self.last_error)
+        self.I += ki * self.error
+
+        U = P + D
+
+        # self.robot.drive(speed, U)
+
+        self.left_motor.run(speed - U)
+        self.right_motor.run(speed + U)
+
+        self.last_error = self.error
+
+        wait(10)
+
+
+    # линия по 1 датчику по энкодеру
+    def run_line_one_sensor_dist(self, dist, speed=150, kp=5, kd=50, ki=0.07):
+        self.robot.reset()
+        self.stop()
+
+        while self.robot.distance() <= dist:
+            self.run_line_one_sensor(speed=speed, kp=kp, ki=ki, kd=kd)
+
+        self.stop()
+
+
+    # линия по энкодеру
+    def run_line_dist(self, dist, speed=350, kp=2.5, kd=50, ki=0.07):
+        self.robot.reset()
+        self.stop()
+
+        while self.robot.distance() <= dist:
+            self.run_line(speed=speed, kp=kp, ki=ki, kd=kd)
+
+        self.stop()
+
+
+    # линия по времени
+    def run_line_time(self, time, speed=350, kp=2.5, kd=50, ki=0.07):
+        timer = StopWatch()
+        timer.reset()
+
+        self.stop()
+
+        while timer.time() <= time:
+            self.run_line(speed=speed, kp=kp, ki=ki, kd=kd)
+
+        self.stop()
+
+
+    # линия по перекрестку
+    def drive_line_per(self, n=1, speed=350, kp=2.5, kd=50, ki=0.07, forward_drive=1):
+
+        for _ in range(n):
+            self.I = 0
+
+            while self.line_sensor_1.reflection() > 30 or self.line_sensor_2.reflection() > 30:
+                self.run_line(speed=speed, kp=kp, ki=ki, kd=kd)
+
+            self.stop()
+
+            if forward_drive:
+                self.forward(30)
+                self.stop()
+
+
+    # линия до объекта
+    def run_line_object(self, dist, speed=350, kp=2.5, kd=50, ki=0.07):
+
+        self.stop()
+
+        while self.check_limits(self.ultrasonic_sensor.distance(), 40, 500) > dist:
+            self.run_line(speed=speed, kp=kp, ki=ki, kd=kd)
+
+        self.stop()
+
+
+    # функция для вывода информации на экран
+    def update_screen(self, data):
+        self.ev3.screen.clear()
+        self.ev3.screen.draw_text(0, 0, data)
+
+
+    # чекнуть лимиты (граница)
+    def check_limits(self, val, min, max):
+        if min > val: val = min
+        if max < val: val = max
+
+        return val
+
+
+    # едем пока не станет n объектов
+    def drive_count_objects(self, n, speed=350):
+
+        cur_obj = False
+        now_n = 0
+
+        while now_n != n:
+
+            if self.ultrasonic_sensor.distance() < 250 and cur_obj == False:
+                cur_obj = True
+                now_n += 1
+                self.forward(60)
+
+            elif self.ultrasonic_sensor.distance() > 250 and cur_obj == True:
+                cur_obj = False
+
+            self.run_line(speed=speed)
+
+        self.forward(60)
+
+
+    # проверка на свойства объектов - твердый или мягкий
+    def check_type_obj(self):
+
+        self.open_catch()
+        start_angle = self.middle_motor.angle()
+        self.middle_motor.run_time(300, 1000, then=Stop.HOLD)
+
+        if self.middle_motor.angle() - start_angle > 130:
+            return True
+
+        return False
+
+
+    # считывание с датчика расстояния
+    def read_us_dist(self):
+        return self.check_limits(self.ultrasonic_sensor.distance(), 30, 800)
+
+
+    # функция для ввода числа
+    def input_number(self, limits=(), typeTouch=False):
+
+        def check_limits_counter():
+            if limits:
+                min, max = limits
+
+                if min > self.counter: self.counter = min
+                if max < self.counter: self.counter = max
+
+        self.update_screen(self.counter)
+
+        while Button.CENTER not in self.ev3.buttons.pressed():
+
+            if typeTouch == False:
+
+                if Button.UP in self.ev3.buttons.pressed():
+                    self.counter += 1
+
+                    check_limits_counter()
+
+                    self.update_screen(self.counter)
+                    wait(300)
+
+                elif Button.DOWN in self.ev3.buttons.pressed():
+                    self.counter -= 1
+
+                    check_limits_counter()
+
+                    self.update_screen(self.counter)
+                    wait(300)
+
+            else:
+
+                if self.touch_sensor_1.pressed():
+                    self.counter += 1
+
+                    check_limits_counter()
+
+                    self.update_screen(self.counter)
+                    wait(300)
+
+                elif self.touch_sensor_2.pressed():
+                    self.counter -= 1
+
+                    check_limits_counter()
+
+                    self.update_screen(self.counter)
+                    wait(300)
+
+        wait(500)
+        return self.counter
+
+
+    # подсчет кол-ва линий
+    def get_count_lines(self, dist):
+
+        self.robot.stop()
+
+        lines_count = 0
+
+        while self.robot.distance() < dist:
+
+            if self.line_sensor_1.reflection() < 30 and self.line_sensor_2.reflection() < 30:
+                lines_count += 1
+                self.forward(40)
+
+            self.run_line()
+
+        self.robot.stop()
+
+        return lines_count
+
+
+    # функция для определения длины объекта
+    def get_width(self):
+        self.robot.stop()
+
+        start_deg, end_deg, cur_obj = 0, 0, False
+
+        while self.line_sensor_1.reflection() > 30 or self.line_sensor_2.reflection() > 30:
+
+            if self.ultrasonic_sensor.distance() < 250 and cur_obj == False:
+
+                self.robot.stop()
+                start_deg = self.left_motor.angle()
+                cur_obj = True
+
+            elif self.ultrasonic_sensor.distance() > 250 and cur_obj == True:
+
+                self.robot.stop()
+                end_deg = self.left_motor.angle()
+                cur_obj = False
+
+            self.run_line(speed=150)
+
+        self.robot.stop()
+        self.forward(140)
+
+        return (end_deg - start_deg) / 360 * 3.14 * 62.4
+
+
+    # подсчет кол-ва объектов
+    def get_count_objects(self, speed=350):
+        now_n = 0
+        cur_obj = False
+
+        while self.line_sensor_1.reflection() > 30 or self.line_sensor_2.reflection() > 30:
+
+            if self.ultrasonic_sensor.distance() < 250 and cur_obj == False:
+                cur_obj = True
+                now_n += 1
+                # self.ev3.speaker.beep(200)
+                self.forward(80)
+
+            elif self.ultrasonic_sensor.distance() > 250 and cur_obj == True:
+                cur_obj = False
+
+            self.run_line(speed=speed)
+
+        self.forward(150)
+        self.robot.stop()
+
+        return now_n
+
+
+    # выравнивание
+    def align(self, speed=None, threshold=20):
+
+        if not speed:
+            speed = self.default_speed
+
+        self.stop()
+
+        first_sns = 0
+
+        def backward_sensor():
+            while 1:
+                if self.read_line_1() < threshold and first_sns != -1:
+                    self.stop()
+                    return -1
+                if self.read_line_2() < threshold and first_sns != 1:
+                    self.stop()
+                    return 1
+
+                self.left_motor.run(-speed)
+                self.right_motor.run(-speed)
+
+        first_sns = backward_sensor()
+        start_deg = self.left_motor.angle()
+
+        backward_sensor()
+        self.stop()
+
+        end_deg = self.left_motor.angle()
+
+
+        delta_deg = (end_deg - start_deg) * 1.9
+
+        while abs(self.left_motor.angle()-end_deg) < abs(delta_deg):
+            self.left_motor.run(-speed*first_sns)
+            self.right_motor.run(speed*first_sns)
+
+        self.stop()
+
+        self.forward(20)
+
+        while self.read_line_1() > threshold or self.read_line_2() > threshold:
+            l_1 = self.read_line_1() > threshold
+            l_2 = self.read_line_2() > threshold
+
+            if l_1 and l_2:
+                self.left_motor.run(-speed)
+                self.right_motor.run(-speed)
+            elif l_1 and not l_2:
+                self.left_motor.run(-speed)
+                self.right_motor.run(0)
+            elif not l_1 and l_2:
+                self.left_motor.run(0)
+                self.right_motor.run(-speed)
+
+        self.stop()
+
+
+    # форма объекта (прямоугольный или круглый) - доделать
+    def get_form_object(self):
+
+        l = []
+
+        start_deg, end_deg, cur_obj = 0, 0, False
+
+        while not self.touch_sensor_1.pressed():
+            us_dist = self.read_us_dist()
+            
+
+            if us_dist < 150 and cur_obj == False:
+
+                self.robot.stop()
+                start_deg = self.left_motor.angle()
+                cur_obj = True
+
+            elif us_dist > 150 and cur_obj == True:
+
+                self.robot.stop()
+                end_deg = self.left_motor.angle()
+                cur_obj = False
+                break
+
+            if cur_obj == True:
+
+                l.append(us_dist)
+            
+            self.robot.drive(50, 0)
+            # self.run_line(speed=150)
+
+        self.robot.stop()
+
+        print(l)
+        l = l[30:len(l)-30]
+        print(sum(l) / len(l))
+        print(min(l))
+        
+        st = l[1:6]
+        end = l[len(l) - 5:len(l)]
+        print(sum(st) / len(st))
+        print(sum(end) / len(end))
+
+
+    def get_enc_values(self):
+        self.stop()
+
+        enc_val = [
+            self.deg_to_mm(self.left_motor.angle()-self.old_left_motor), 
+            self.deg_to_mm(self.right_motor.angle()-self.old_right_motor),
+        ]
+
+        self.old_right_motor = self.right_motor.angle()
+        self.old_left_motor = self.left_motor.angle()
+
+        return enc_val
+
+
+    # main (для использования выше написанных функций)
+    def main(self) -> None:
+        # self.open_catch()
+        self.beep()
+
+        self.old_right_motor = self.right_motor.angle()
+        self.old_left_motor = self.left_motor.angle()
+
+        self.wait_pressed()
+        self.stop()
+        wait(500)
+
+        self.get_enc_values()
+
+        line_values = []
+
+        for _ in range(3):
+            self.drive_line_per(1, speed=350, kp=5, kd=45, ki=0.01)
+            print(int(sum(self.get_enc_values())/2))
+
+        """
+        1 -> f0
+        266
+        591
+        467
+        243
+
+        5 -> 6
+        408
+        645
+        410
+
+        3 -> 4
+        896
+        1065
+        332
+        585
+        465
+        144
+        225
+
+        2 -> f
+        321
+        776
+        760
+        """
+
+        
+
+
+        # здесь код
+
+
+        self.stop()
+        wait(300000)
+
+
+r = Robot()
+r.main()
